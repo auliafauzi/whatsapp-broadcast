@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Broadcast System</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">📢</div>
+        <div>
+          <h1>WA Broadcast</h1>
+          <span>v1.0.0</span>
+        </div>
+      </div>
+      
+      <nav>
+        <button class="nav-item active" data-page="dashboard">
+          <span class="icon">📊</span> Dashboard
+        </button>
+        <button class="nav-item" data-page="broadcast">
+          <span class="icon">🚀</span> Broadcast
+        </button>
+        <button class="nav-item" data-page="contacts">
+          <span class="icon">👥</span> Kontak
+        </button>
+        <button class="nav-item" data-page="templates">
+          <span class="icon">📝</span> Template
+        </button>
+        <button class="nav-item" data-page="history">
+          <span class="icon">📜</span> Riwayat
+        </button>
+        <button class="nav-item" data-page="settings">
+          <span class="icon">⚙️</span> Pengaturan
+        </button>
+      </nav>
+      
+      <div class="connection-status">
+        <div class="status-indicator">
+          <span class="status-dot" id="statusDot"></span>
+          <span id="statusText">Menghubungkan...</span>
+        </div>
+        <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);" id="statusDetail">
+          Menunggu koneksi
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Toast Container -->
+      <div class="toast-container" id="toastContainer"></div>
+      
+      <!-- ========== DASHBOARD PAGE ========== -->
+      <div id="page-dashboard" class="page">
+        <div class="page-header">
+          <h2>Dashboard</h2>
+          <p>Ringkasan aktivitas broadcast Anda</p>
+        </div>
+        
+        <div class="card-grid">
+          <div class="stat-card">
+            <div class="label">Total Kontak</div>
+            <div class="value" id="statContacts">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Template Pesan</div>
+            <div class="value primary" id="statTemplates">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Broadcast Hari Ini</div>
+            <div class="value" id="statTodayBroadcasts">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Pesan Terkirim Hari Ini</div>
+            <div class="value primary" id="statTodaySent">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Gagal Hari Ini</div>
+            <div class="value danger" id="statTodayFailed">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Total Broadcast</div>
+            <div class="value" id="statTotalBroadcasts">0</div>
+          </div>
+        </div>
+        
+        <div class="content-card">
+          <h3>📡 Status Koneksi WhatsApp</h3>
+          <div id="connectionPanel">
+            <div class="empty-state">
+              <div class="icon">📱</div>
+              <p>Memeriksa status koneksi...</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="content-card">
+          <h3>🔄 Broadcast Aktif</h3>
+          <div id="activeBroadcasts">
+            <div class="empty-state">
+              <div class="icon">🚀</div>
+              <p>Tidak ada broadcast yang sedang berjalan</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ========== BROADCAST PAGE ========== -->
+      <div id="page-broadcast" class="page hidden">
+        <div class="page-header">
+          <h2>Kirim Broadcast</h2>
+          <p>Kirim pesan ke banyak kontak sekaligus</p>
+        </div>
+        
+        <div class="content-card">
+          <h3>🎯 Pilih Penerima</h3>
+          
+          <div class="form-group">
+            <label>Filter Berdasarkan Tag</label>
+            <select id="broadcastTagFilter">
+              <option value="">Semua Kontak</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Atau Pilih Kontak Spesifik</label>
+            <div class="contact-selector" id="broadcastContactList">
+              <div class="empty-state" style="padding: 20px;">
+                <p>Memuat kontak...</p>
+              </div>
+            </div>
+            <div style="margin-top: 8px; font-size: 13px; color: var(--text-secondary);">
+              <span id="selectedCount">0</span> kontak dipilih
+            </div>
+          </div>
+        </div>
+        
+        <div class="content-card">
+          <h3>📝 Isi Pesan</h3>
+          
+          <div class="form-group">
+            <label>Gunakan Template (Opsional)</label>
+            <select id="broadcastTemplate">
+              <option value="">-- Pesan Manual --</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Isi Pesan</label>
+            <textarea id="broadcastMessage" placeholder="Tulis pesan Anda di sini..."></textarea>
+            <div style="margin-top: 6px; font-size: 12px; color: var(--text-secondary); text-align: right;">
+              <span id="charCount">0</span> karakter
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label>Delay Antara Pesan (ms)</label>
+              <input type="number" id="broadcastDelay" value="2000" min="1000" max="10000">
+            </div>
+            <div class="form-group">
+              <label>Nama Broadcast</label>
+              <input type="text" id="broadcastName" placeholder="Broadcast Promo Juli">
+            </div>
+          </div>
+          
+          <div class="btn-group">
+            <button class="btn btn-primary" onclick="startBroadcast()">
+              🚀 Kirim Broadcast
+            </button>
+            <button class="btn btn-secondary" onclick="previewBroadcast()">
+              👁️ Preview
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ========== CONTACTS PAGE ========== -->
+      <div id="page-contacts" class="page hidden">
+        <div class="page-header">
+          <h2>Manajemen Kontak</h2>
+          <p>Kelola daftar kontak untuk broadcast</p>
+        </div>
+        
+        <div class="content-card">
+          <h3>➕ Tambah Kontak</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nama</label>
+              <input type="text" id="contactName" placeholder="Nama lengkap">
+            </div>
+            <div class="form-group">
+              <label>Nomor WhatsApp</label>
+              <input type="text" id="contactPhone" placeholder="6281234567890">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Tag (pisahkan dengan koma)</label>
+            <input type="text" id="contactTags" placeholder="pelanggan, vip, jakarta">
+          </div>
+          <button class="btn btn-primary" onclick="addContact()">
+            ➕ Tambah Kontak
+          </button>
+        </div>
+        
+        <div class="content-card">
+          <h3>📥 Import Bulk</h3>
+          <div class="form-group">
+            <label>Upload File JSON</label>
+            <input type="file" id="contactFile" accept=".json">
+            <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+              Format: [{"name":"Budi","phone":"6281234567890","tags":["pelanggan"]}]
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="importContacts()">
+            📥 Import Kontak
+          </button>
+        </div>
+        
+        <div class="content-card">
+          <h3>📋 Daftar Kontak (<span id="contactTotal">0</span>)</h3>
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Nama</th>
+                  <th>Nomor</th>
+                  <th>Tag</th>
+                  <th>Ditambahkan</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="contactsTableBody">
+                <tr>
+                  <td colspan="5" class="empty-state" style="padding: 40px;">
+                    Belum ada kontak
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ========== TEMPLATES PAGE ========== -->
+      <div id="page-templates" class="page hidden">
+        <div class="page-header">
+          <h2>Template Pesan</h2>
+          <p>Buat template untuk penggunaan berulang</p>
+        </div>
+        
+        <div class="content-card">
+          <h3>➕ Buat Template Baru</h3>
+          <div class="form-group">
+            <label>Nama Template</label>
+            <input type="text" id="templateName" placeholder="Promo Spesial">
+          </div>
+          <div class="form-group">
+            <label>Isi Pesan</label>
+            <textarea id="templateContent" placeholder="Halo {{nama}}! Kami punya promo spesial untuk Anda..."></textarea>
+            <div style="margin-top: 6px; font-size: 12px; color: var(--text-secondary);">
+              Gunakan {{variabel}} untuk placeholder dinamis
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addTemplate()">
+            💾 Simpan Template
+          </button>
+        </div>
+        
+        <div class="content-card">
+          <h3>📋 Daftar Template</h3>
+          <div id="templatesList">
+            <div class="empty-state">
+              <div class="icon">📝</div>
+              <p>Belum ada template</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ========== HISTORY PAGE ========== -->
+      <div id="page-history" class="page hidden">
+        <div class="page-header">
+          <h2>Riwayat Broadcast</h2>
+          <p>Lihat aktivitas broadcast sebelumnya</p>
+        </div>
+        
+        <div class="content-card">
+          <div id="historyList">
+            <div class="empty-state">
+              <div class="icon">📜</div>
+              <p>Belum ada riwayat broadcast</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- ========== SETTINGS PAGE ========== -->
+      <div id="page-settings" class="page hidden">
+        <div class="page-header">
+          <h2>Pengaturan</h2>
+          <p>Konfigurasi sistem broadcast</p>
+        </div>
+        
+        <div class="content-card">
+          <h3>📱 Koneksi WhatsApp</h3>
+          <div id="settingsConnectionPanel">
+            <div class="empty-state">
+              <div class="icon">📱</div>
+              <p>Memeriksa status...</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="content-card">
+          <h3>⚡ Pengaturan Sistem</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Rate Limit (ms)</label>
+              <input type="number" id="settingRateLimit" value="2000" min="1000">
+            </div>
+            <div class="form-group">
+              <label>Max Batch Size</label>
+              <input type="number" id="settingBatchSize" value="100" min="10" max="500">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()">
+            💾 Simpan Pengaturan
+          </button>
+        </div>
+        
+        <div class="content-card">
+          <h3>🧪 Tes Pengiriman</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nomor Tujuan</label>
+              <input type="text" id="testPhone" placeholder="6281234567890">
+            </div>
+            <div class="form-group">
+              <label>Pesan</label>
+              <input type="text" id="testMessage" placeholder="Halo, ini pesan tes!">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="sendTest()">
+            📤 Kirim Tes
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script src="/js/app.js"></script>
+</body>
+</html>
