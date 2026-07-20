@@ -17,7 +17,7 @@ class ConnectionManager {
   constructor() {
     this.sock = null;
     this.qrCode = null;
-    this.status = "disconnected"; // disconnected, connecting, qr_required, connected
+    this.status = "disconnected";
     this.connectionInfo = {};
     this.messageQueue = [];
     this.isProcessing = false;
@@ -47,15 +47,12 @@ class ConnectionManager {
         retryRequestDelayMs: 250
       });
 
-      // Save credentials when updated
       this.sock.ev.on("creds.update", saveCreds);
 
-      // Connection updates
       this.sock.ev.on("connection.update", (update) => {
         this.handleConnectionUpdate(update);
       });
 
-      // Messages received (for monitoring)
       this.sock.ev.on("messages.upsert", (m) => {
         if (this.onMessageReceived) {
           this.onMessageReceived(m);
@@ -80,7 +77,6 @@ class ConnectionManager {
       this.status = "qr_required";
       global.connectionStatus = this.status;
       console.log("[WhatsApp] QR Code generated - scan required");
-      // Also print to terminal for convenience
       qrcode.generate(qr, { small: true });
     }
 
@@ -110,8 +106,6 @@ class ConnectionManager {
         connectedAt: new Date().toISOString()
       };
       console.log(`[WhatsApp] Connected as ${this.sock.user?.id}`);
-      
-      // Process queued messages
       this.processQueue();
     }
   }
@@ -121,16 +115,18 @@ class ConnectionManager {
       throw new Error("WhatsApp not connected");
     }
 
-    // Rate limiting
     const delay = options.delay || parseInt(process.env.RATE_LIMIT_DELAY) || 2000;
     await new Promise(resolve => setTimeout(resolve, delay));
 
     try {
+      console.log(`[WhatsApp] Sending message to ${jid}...`);
       const result = await this.sock.sendMessage(jid, message);
-      return { success: true, messageId: result.key.id };
+      console.log(`[WhatsApp] Message sent to ${jid}, ID: ${result?.key?.id}`);
+      return { success: true, messageId: result?.key?.id };
     } catch (error) {
       console.error(`[WhatsApp] Failed to send to ${jid}:`, error.message);
-      return { success: false, error: error.message };
+      console.error(`[WhatsApp] Error details:`, error.stack);
+      return { success: false, error: error.message, details: error.stack };
     }
   }
 
@@ -143,10 +139,11 @@ class ConnectionManager {
     while (this.messageQueue.length > 0 && this.status === "connected") {
       const item = this.messageQueue.shift();
       try {
-        await this.sendMessage(item.jid, item.message, item.options);
-        if (item.onSuccess) item.onSuccess();
+        const result = await this.sendMessage(item.jid, item.message, item.options);
+        if (result.success && item.onSuccess) item.onSuccess();
+        if (!result.success && item.onError) item.onError(result.error);
       } catch (err) {
-        if (item.onError) item.onError(err);
+        if (item.onError) item.onError(err.message);
       }
     }
     

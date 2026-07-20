@@ -11,8 +11,23 @@ const routes = require("./api/Routes");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ===== FIX CORS =====
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true
+}));
+
+// Handle preflight
+app.options('*', cors());
+
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+
 // Middleware
-app.use(cors());
+//app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 

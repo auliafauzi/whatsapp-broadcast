@@ -44,7 +44,11 @@ class Store {
 
   // ===== CONTACTS =====
   addContact(name, phone, tags = []) {
-    const phoneClean = phone.replace(/\D/g, '');
+    // const phoneClean = phone.replace(/\D/g, '');
+    let phoneClean = phone.replace(/\D/g, '');
+	if (phoneClean.startsWith('0')) {
+  	phoneClean = '62' + phoneClean.substring(1);
+	}
     const jid = `${phoneClean}@s.whatsapp.net`;
     
     // Check if exists

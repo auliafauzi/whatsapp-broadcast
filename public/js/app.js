@@ -31,7 +31,6 @@ function navigateTo(page) {
   
   state.currentPage = page;
   
-  // Refresh data for specific pages
   if (page === 'dashboard') refreshDashboard();
   if (page === 'contacts') loadContacts();
   if (page === 'templates') loadTemplates();
@@ -55,7 +54,7 @@ function showToast(message, type = 'success') {
     toast.style.opacity = '0';
     toast.style.transform = 'translateX(100%)';
     setTimeout(() => toast.remove(), 300);
-  }, 4000);
+  }, 5000);
 }
 
 // ===== API HELPERS =====
@@ -66,7 +65,10 @@ async function api(url, options = {}) {
       ...options
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Request failed');
+    if (!res.ok) {
+      const errorMsg = data.error || data.message || `HTTP ${res.status}`;
+      throw new Error(errorMsg);
+    }
     return data;
   } catch (err) {
     showToast(err.message, 'error');
@@ -306,15 +308,13 @@ async function importContacts() {
   }
   
   try {
-    const text = await file.text();
-    const contacts = JSON.parse(text);
-    
     const formData = new FormData();
-    const blob = new Blob([JSON.stringify(contacts)], { type: 'application/json' });
-    formData.append('file', blob, 'contacts.json');
+    formData.append('file', file);
     
     const res = await fetch('/api/contacts/bulk', { method: 'POST', body: formData });
     const data = await res.json();
+    
+    if (!res.ok) throw new Error(data.error || 'Import failed');
     
     showToast(`Import selesai: ${data.added} ditambah, ${data.updated} diupdate, ${data.failed} gagal`);
     fileInput.value = '';
@@ -330,12 +330,10 @@ async function loadTemplates() {
     const templates = await api('/templates');
     state.templates = templates;
     
-    // Update broadcast template dropdown
     const select = document.getElementById('broadcastTemplate');
     select.innerHTML = '<option value="">-- Pesan Manual --</option>' + 
       templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
     
-    // Render templates list
     const container = document.getElementById('templatesList');
     if (templates.length === 0) {
       container.innerHTML = `
@@ -371,7 +369,6 @@ async function addTemplate() {
     return;
   }
   
-  // Extract variables
   const vars = [...content.matchAll(/\{\{(.+?)\}\}/g)].map(m => m[1].trim());
   
   try {
@@ -519,9 +516,7 @@ function previewBroadcast() {
 Pesan:
 ${message}
 
-Target: ${count} kontak
-
-(Preview ini akan ditampilkan dalam modal di versi berikutnya)`);
+Target: ${count} kontak`);
 }
 
 // ===== HISTORY =====
@@ -580,7 +575,7 @@ async function loadHistory() {
   } catch (err) {}
 }
 
-// ===== SETTINGS =====
+// ===== SETTINGS - FIXED TEST SEND =====
 async function refreshSettings() {
   const status = await checkConnection();
   const panel = document.getElementById('settingsConnectionPanel');
@@ -633,10 +628,10 @@ async function refreshSettings() {
 function saveSettings() {
   const rateLimit = document.getElementById('settingRateLimit').value;
   const batchSize = document.getElementById('settingBatchSize').value;
-  // In real app, save to backend
   showToast('Pengaturan disimpan (lokal)');
 }
 
+// FIXED: Test send with better error handling
 async function sendTest() {
   const phone = document.getElementById('testPhone').value.trim();
   const message = document.getElementById('testMessage').value.trim();
@@ -646,14 +641,34 @@ async function sendTest() {
     return;
   }
   
+  // Show loading
+  const btn = document.querySelector('button[onclick="sendTest()"]');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '⏳ Mengirim...';
+  btn.disabled = true;
+  
   try {
-    await api('/send/test', {
+    const res = await fetch('/api/send/test', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, message })
     });
-    showToast('Pesan tes terkirim!');
+    
+    const data = await res.json();
+    
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Gagal mengirim pesan');
+    }
+    
+    showToast(`✅ Pesan terkirim ke ${phone}! ID: ${data.messageId?.slice(0, 8) || 'N/A'}`);
     document.getElementById('testMessage').value = '';
-  } catch (err) {}
+  } catch (err) {
+    console.error('Test send error:', err);
+    showToast('❌ ' + err.message, 'error');
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
 }
 
 // ===== INITIALIZATION =====
@@ -661,7 +676,6 @@ function init() {
   checkConnection();
   refreshDashboard();
   
-  // Auto-refresh every 5 seconds
   setInterval(() => {
     if (state.currentPage === 'dashboard') refreshDashboard();
     if (state.currentPage === 'history') loadHistory();
